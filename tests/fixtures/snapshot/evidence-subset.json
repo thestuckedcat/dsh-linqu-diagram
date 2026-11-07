@@ -1,0 +1,155 @@
+{
+  "atlas_version": "sdk-code-atlas/0.8-synthetic",
+  "nodes": [
+    {
+      "id": "svc:main",
+      "label": "svc_main",
+      "kind": "function",
+      "description": "Entry point of the synthetic service fixture.",
+      "evidence_refs": [
+        {
+          "evidence_id": "ev-svc-main-def",
+          "source_id": "local-atlas-synthetic",
+          "repo_id": "repo-svc",
+          "path_ref": "src/main.c",
+          "content_digest": "sha256:aaa111",
+          "line_start": 10,
+          "line_end": 42,
+          "kind": "source"
+        }
+      ]
+    },
+    {
+      "id": "svc:helper",
+      "label": "svc_helper",
+      "kind": "function",
+      "description": "Helper declared in a generated header.",
+      "evidence_refs": [
+        {
+          "evidence_id": "ev-svc-helper-decl",
+          "source_id": "local-atlas-synthetic",
+          "repo_id": "repo-svc",
+          "path_ref": "include/helper.h",
+          "content_digest": "sha256:bbb222",
+          "line_start": 3,
+          "line_end": 3,
+          "kind": "compiler"
+        }
+      ]
+    },
+    {
+      "id": "lib:util",
+      "label": "lib_util",
+      "kind": "module",
+      "description": "Library module only referenced through a build product.",
+      "evidence_refs": [
+        {
+          "evidence_id": "ev-lib-util",
+          "source_id": "local-atlas-synthetic",
+          "repo_id": "repo-lib",
+          "path_ref": "lib/util.c",
+          "content_digest": "sha256:ccc333",
+          "line_start": 1,
+          "line_end": 120,
+          "kind": "source"
+        }
+      ]
+    },
+    {
+      "id": "svc:unknown-sink",
+      "label": "unknown_sink",
+      "kind": "module",
+      "description": "Explicit unknown node: the relation could not be resolved.",
+      "evidence_refs": []
+    },
+    {
+      "id": "note:review",
+      "label": "人工复核：跨仓调用未定性",
+      "kind": "note",
+      "description": "Reviewer note added while reading the snapshot, not a code fact.",
+      "evidence_refs": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:exact-call",
+      "from": "svc:main",
+      "to": "svc:helper",
+      "kind": "call",
+      "certainty": "exact",
+      "label": "calls",
+      "explanation": "Compiler-observed direct call.",
+      "evidence_refs": [
+        {
+          "evidence_id": "ev-edge-exact",
+          "source_id": "local-atlas-synthetic",
+          "repo_id": "repo-svc",
+          "path_ref": "src/main.c",
+          "content_digest": "sha256:aaa111",
+          "line_start": 24,
+          "line_end": 24,
+          "kind": "compiler"
+        }
+      ]
+    },
+    {
+      "id": "edge:may-call",
+      "from": "svc:helper",
+      "to": "lib:util",
+      "kind": "call",
+      "certainty": "may",
+      "label": "may call",
+      "explanation": "Indirect through a function pointer; possible but not proven.",
+      "evidence_refs": [
+        {
+          "evidence_id": "ev-edge-may",
+          "source_id": "local-atlas-synthetic",
+          "repo_id": "repo-svc",
+          "path_ref": "src/helper.c",
+          "content_digest": "sha256:ddd444",
+          "line_start": 55,
+          "line_end": 61,
+          "kind": "source"
+        }
+      ]
+    },
+    {
+      "id": "edge:unresolved",
+      "from": "svc:main",
+      "to": "svc:unknown-sink",
+      "kind": "reference",
+      "certainty": "unresolved",
+      "label": "references (unresolved)",
+      "explanation": "Target symbol could not be resolved inside the snapshot.",
+      "evidence_refs": [
+        {
+          "evidence_id": "ev-edge-unresolved",
+          "source_id": "local-atlas-synthetic",
+          "repo_id": "repo-svc",
+          "path_ref": "src/main.c",
+          "content_digest": "sha256:aaa111",
+          "line_start": 31,
+          "line_end": 31,
+          "kind": "source"
+        }
+      ]
+    },
+    {
+      "id": "edge:annotation-review",
+      "from": "lib:util",
+      "to": "note:review",
+      "kind": "annotation",
+      "certainty": "unknown",
+      "label": "reviewer annotation",
+      "explanation": null,
+      "evidence_refs": []
+    }
+  ],
+  "coverage": {
+    "truncated": false,
+    "omitted_nodes": 0,
+    "omitted_edges": 0,
+    "unresolved_count": 1,
+    "notes": ["Synthetic fixture: no Atlas analysis was executed for this repository."]
+  }
+}

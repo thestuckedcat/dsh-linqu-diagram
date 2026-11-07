@@ -1,0 +1,63 @@
+{
+  "name": "dsh-local-diagrams",
+  "version": "0.1.0-dev.1",
+  "private": true,
+  "type": "module",
+  "description": "06 local diagrams: evidence-backed offline diagram generation, restricted .drawio round-trip, and a local versioned SVG editor for DeepSeek Harness 0.2.1-rc.5",
+  "license": "Apache-2.0",
+  "main": "plugin/index.mjs",
+  "exports": {
+    ".": "./plugin/index.mjs",
+    "./client": "./plugin/client.js",
+    "./src/*": "./src/*",
+    "./tools/*": "./tools/*",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "plugin",
+    "src",
+    "ui",
+    "schemas",
+    "skills",
+    "tools",
+    "docs",
+    "evidence/README.md",
+    "runtime/README.md",
+    "cordis.patch.yml",
+    "source-lock.json",
+    "README.md",
+    "PLAN.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "engines": {
+    "node": ">=24.9.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection"
+      ],
+      "platform": "web"
+    },
+    "compatibility": {
+      "dshReleases": {
+        "0.2.1-rc.5": "unknown"
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/",
+    "test:unit": "node --test tests/unit/",
+    "render:fixture": "node tools/render.mjs --fixture --renderer builtin --out ./scratch-output",
+    "network-smoke": "node tools/network-smoke.mjs --isolated --renderers builtin",
+    "editor-smoke": "node tools/editor-smoke.mjs --isolated --fixture",
+    "build:client": "node tools/build-client.mjs",
+    "check:client": "node tools/build-client.mjs --check",
+    "validate": "node tools/validate.mjs"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "fixture-render",
+  "command": "node tools/render.mjs --fixture --renderer builtin --out ./scratch-output",
+  "runtime": "node v26.13.0 (win32 x64)",
+  "source_lock_digest": "c2a4e0fd2e7ae379279ed774c6bd5c55866dc6b5899d959cad65948f5bc0affd",
+  "started_at": "2026-11-07T01:00:02.719Z",
+  "finished_at": "2026-11-07T01:00:03.021Z",
+  "exit_code": 0,
+  "pass": null,
+  "fail": null,
+  "skip": null,
+  "status": "passed",
+  "stdout_tail": "{\n  \"schema_version\": 1,\n  \"command\": \"node tools/render.mjs\",\n  \"status\": \"saved\",\n  \"mode\": \"evidence\",\n  \"renderer\": \"builtin\",\n  \"source_state\": \"current\",\n  \"nodes\": 5,\n  \"edges\": 4,\n  \"truncated\": false,\n  \"artifact_ref\": \"E:\\\\dsh\\\\plugin\\\\06-local-diagrams\\\\scratch-output\\\\fixture\\\\artifact-21218a4e319359470b5bb213\",\n  \"manifest_digest\": \"1f3fd7608694eb3ab0f2dfe4c56f52f515cee51556eaa7cb54c606bd1aea49aa\",\n  \"warnings\": [\n    \"coverage.complete=false：v1 固定不承诺全仓完整。\",\n    \"unresolved_count=1：unresolved 边不是 exact。\"\n  ],\n  \"checks\": {\n    \"files\": 7,\n    \"expected_files\": 7,\n    \"resource_manifest\": true,\n    \"manifest_verify\": true,\n    \"offline_html\": true,\n    \"remote_refs\": 0\n  },\n  \"exit_code\": 0\n}\n",
+  "stderr_tail": "",
+  "limitations": [
+    "Component-level run on synthetic fixtures; no installed Host/browser/OS outlet claim."
+  ]
+}

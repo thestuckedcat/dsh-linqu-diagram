@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "runtime": {
+    "node": ">=24.9.0",
+    "tested_node": "26.13.0",
+    "tested_node_sha256": null,
+    "host_node": "24.21.0",
+    "package_manager": "npm-compatible; no runtime dependencies"
+  },
+  "host": {
+    "product": "DeepSeek Harness",
+    "version": "0.2.1-rc.5",
+    "electron": "44.7.0",
+    "host_protocol_version": 4,
+    "app_asar_sha256": "e1b6f25fa937da98086c3e77af77aa14791105963c4d337a1c42179d232c6915",
+    "installed_checkout": "E:/dsh/resources/app.asar (read-only interface audit; no Host code vendored)",
+    "verified_interfaces": [
+      {
+        "module": "@deepseek-ai/dsh-client-connection/lib/index.js",
+        "sha256": "0ebcca7583e082716f79b0b55bc1749d48269cc8db2989b043b321b57abd3684",
+        "mechanism": "ctx.connection.rpc.handle(channel, handler); handler(endpoint, payload, signal, peer) returns RpcResult {ok:true,value}|{ok:false,error}",
+        "adopted": "thin adapter only"
+      },
+      {
+        "module": "@deepseek-ai/dsh-client-connection/lib/client.browser.js",
+        "sha256": "dfc3544eb894c74b340a4c4c63a8c125fd2e983df9efed5885712574af994e62",
+        "mechanism": "client ctx.connection.rpc.call(channel, endpoint, payload, signal) returns RpcResult",
+        "adopted": "thin adapter only"
+      },
+      {
+        "module": "@deepseek-ai/dsh-client-ui-layout/lib/client.js",
+        "sha256": "eb011a7b5699fac7f3ad0aa15408f46a6cf47f79b8cc15db1f81739e81e70587",
+        "mechanism": "ctx.slots.inject/register main keyed slot; ctx.layout.selectPanel(id)",
+        "adopted": "thin adapter only"
+      },
+      {
+        "module": "@deepseek-ai/dsh-client-modules/lib/client.js",
+        "sha256": null,
+        "mechanism": "window.__ModuleLoader__.load({id, factory(require)}) lazy-CJS client bundle; dsh.client declaration and shared platform module table (react, react/jsx-runtime, @deepseek-ai/dsh-client-ui-slots, ...)",
+        "adopted": "bundle format only; no source vendored"
+      },
+      {
+        "module": "@deepseek-ai/dsh-package-manifest",
+        "sha256": null,
+        "mechanism": "dsh.bundle.patch + dsh.client {inject, platform} package declaration",
+        "adopted": "package metadata only"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "own-design",
+      "kind": "design",
+      "repository": "workspace:06-local-diagrams",
+      "commit": null,
+      "version": "DIA-DESIGN-2",
+      "package": null,
+      "artifact_sha256": null,
+      "license": null,
+      "license_ref": "docs/software-design.md",
+      "adopted_files": [],
+      "resource_manifest_ref": null,
+      "note": "Self-implemented; this design is the encoding contract, not a reused artifact."
+    },
+    {
+      "id": "atlas-local",
+      "kind": "existing-tool",
+      "repository": "local:H:/VSCODE_READER",
+      "commit": null,
+      "version": "SDK Code Atlas v0.8 (self-reported, MIT)",
+      "package": null,
+      "artifact_sha256": null,
+      "license": "MIT (self-reported)",
+      "license_ref": "H:/VSCODE_READER (not audited this round)",
+      "adopted_files": [],
+      "resource_manifest_ref": null,
+      "note": "Investigation only. No Atlas analysis, doctor, index, or file copy was executed. Evidence subset is a synthetic fixture."
+    },
+    {
+      "id": "archify",
+      "kind": "candidate-renderer",
+      "repository": "https://github.com/tt-a1i/archify",
+      "commit": "a4065941f12be7967436261d9934784e381d423c",
+      "version": "3.2.0",
+      "package": null,
+      "artifact_sha256": null,
+      "license": "Apache-2.0 (declared upstream, package bytes not audited)",
+      "license_ref": "https://github.com/tt-a1i/archify/blob/a4065941f12be7967436261d9934784e381d423c/LICENSE",
+      "adopted_files": [],
+      "resource_manifest_ref": null,
+      "note": "Mechanism reference only (layout/visual constraints, opt-in skill). Not vendored, not executed; builtin renderer used instead."
+    },
+    {
+      "id": "dsh-drawioedit",
+      "kind": "candidate-editor",
+      "repository": "https://github.com/zhang-guo-wen/dsh-drawioedit",
+      "commit": "bfbcf347f26d9158f7f34bbb6ce416e504b74cdd",
+      "version": "1.3.0",
+      "package": "@guowenzhang/dsh-drawioedit",
+      "artifact_sha256": null,
+      "license": "Apache-2.0 (wrapper declared; vendored editor assets not audited)",
+      "license_ref": "https://github.com/zhang-guo-wen/dsh-drawioedit/blob/bfbcf347f26d9158f7f34bbb6ce416e504b74cdd/LICENSE",
+      "adopted_files": [],
+      "resource_manifest_ref": null,
+      "note": "Investigation only. Save-version guard and command model reimplemented; no vendor editor bytes used. Optional compatibility enhancement remains unadopted."
+    },
+    {
+      "id": "dsh-host-baseline",
+      "kind": "host-runtime",
+      "repository": "installed:deepseek-harness",
+      "commit": null,
+      "version": "0.2.1-rc.5",
+      "package": "@deepseek-ai/dsh",
+      "artifact_sha256": "e1b6f25fa937da98086c3e77af77aa14791105963c4d337a1c42179d232c6915",
+      "license": "MIT (per shipped packages; host application is proprietary)",
+      "license_ref": "E:/dsh/resources/app.asar (read-only audit)",
+      "adopted_files": [],
+      "resource_manifest_ref": null,
+      "note": "Peer/runtime dependency. No host source copied into this repository; interfaces verified by reading installed lib files."
+    }
+  ],
+  "commands": [],
+  "evidence_refs": [
+    "docs/implementation-route.md",
+    "docs/interfaces.md",
+    "evidence/README.md"
+  ],
+  "limits": {
+    "network_mode": "none",
+    "remote_services": [],
+    "model_services": [],
+    "credential_access": false
+  }
+}

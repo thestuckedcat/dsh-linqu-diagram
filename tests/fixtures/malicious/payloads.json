@@ -1,0 +1,29 @@
+{
+  "labels": [
+    "<script>alert(1)</script>",
+    "&lt;img src=x onerror=alert(1)&gt;",
+    "\" onmouseover=\"alert(1)",
+    "</text><script>alert(2)</script>",
+    "a\u0000b\u0007c",
+    "emoji \ud83d\ude00 and RTL \u202e evil",
+    "line1\nline2\tline3",
+    "https://evil.example/x.svg",
+    "javascript:alert(1)",
+    "data:image/svg+xml,<svg onload=alert(1)>",
+    "]]><script>alert(3)</script>",
+    "<!-- comment -->",
+    "<?xml version=\"1.0\"?>",
+    "<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>"
+  ],
+  "foreign_object": "<foreignObject><iframe src=\"https://evil.example\"/></foreignObject>",
+  "xml_bomb": "<!DOCTYPE bomb [<!ENTITY a \"AAAAAAAAAA\"><!ENTITY b \"&a;&a;&a;&a;&a;&a;&a;&a;\">]><bomb>&b;</bomb>",
+  "remote_style": "shape=image;image=https://evil.example/x.svg;fontFamily=Remote Font;html=1;",
+  "remote_style_cases": [
+    "shape=image;image=data:image/svg+xml;base64,PHN2Zz4=;",
+    "shape=link;link=https://evil.example;",
+    "fontFamily=Evil Remote Font;",
+    "html=1;",
+    "verticalLabelPosition=bottom;image=file:///C:/secret;"
+  ],
+  "control_style": "rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;edgeStyle=orthogonalEdgeStyle;"
+}

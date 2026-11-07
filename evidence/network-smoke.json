@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "network-smoke",
+  "command": "node tools/network-smoke.mjs --isolated --renderers builtin",
+  "runtime": "node v26.13.0 (win32 x64)",
+  "source_lock_digest": "c2a4e0fd2e7ae379279ed774c6bd5c55866dc6b5899d959cad65948f5bc0affd",
+  "started_at": "2026-11-07T01:00:42.254Z",
+  "finished_at": "2026-11-07T01:00:42.451Z",
+  "exit_code": 0,
+  "spawn_error": null,
+  "pass": null,
+  "fail": null,
+  "skip": null,
+  "status": "passed",
+  "stdout_tail": "      \"errors\": []\n    },\n    \"manifest_digest\": \"bf7b4435df27d11ebbbc5dbf2a84dcb974184fdb1f60047288aac3f54bab5f3a\",\n    \"determinism\": {\n      \"artifact_dir_id\": \"artifact-8ad941f09cf6d91037d26f29\",\n      \"note\": \"fixture spec/overlay are pinned, so the artifact directory id is deterministic; manifest_digest includes the archive created_at clock and varies per run\"\n    },\n    \"archive_layer\": \"renderLocal (atomic staging + manifest)\"\n  },\n  \"static_network_import_scan\": {\n    \"ok\": true,\n    \"files\": [\n      \"src/contracts.mjs\",\n      \"src/layout.mjs\",\n      \"src/render-svg.mjs\",\n      \"src/render-html.mjs\",\n      \"src/assets.mjs\",\n      \"src/archive.mjs\",\n      \"src/evidence.mjs\"\n    ],\n    \"findings\": []\n  },\n  \"attempt_policy\": {\n    \"network_mode\": \"none\",\n    \"registered_origins\": [],\n    \"rule\": \"while network_mode is none with no registered origins, every attempted connection is an unregistered attempt and fails the smoke\"\n  },\n  \"attempts\": [],\n  \"attempted_count\": 0,\n  \"registered_attempts\": 0,\n  \"unregistered_attempts\": 0,\n  \"exit_code\": 0,\n  \"pass\": true,\n  \"limitations\": [\n    \"Guard is a this-process JS audit boundary, not OS-level isolation; browser/CSP/native/other-process outlet remains a separate gate.\",\n    \"Builtin renderer only: Atlas is investigation-only; Archify/Drawio have no adopted locked executor (source-lock.commands is empty) and were not executed.\",\n    \"source-lock.json is Lead-owned and was read only; no adopted source bytes were verified by this tool (see tools/check-runtime.mjs for adopted-file verification).\"\n  ]\n}\n",
+  "stderr_tail": "",
+  "limitations": [
+    "Component-level run on synthetic fixtures; no installed Host/browser/OS outlet claim."
+  ]
+}

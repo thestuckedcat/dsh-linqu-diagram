@@ -1,0 +1,28 @@
+{
+  "source_id": "local-atlas-synthetic",
+  "scope_ref": "ws:demo",
+  "snapshot_ref": "snap-2026-11-07-02",
+  "repos": [
+    {
+      "repo_id": "repo-svc",
+      "root_ref": "H:/fixture/repo-svc",
+      "revision": "4f1f3e3d0e8f6c6f7f8f9a0b1c2d3e4f5a6b7c8d",
+      "dirty_digest": "dirty:changed-after-generation",
+      "build_variant": "release",
+      "arch": "x64",
+      "compdb_digest": "compdb:svc:1",
+      "generated_headers_digest": "genh:svc:1"
+    },
+    {
+      "repo_id": "repo-lib",
+      "root_ref": "H:/fixture/repo-lib",
+      "revision": "0a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3",
+      "dirty_digest": "dirty:1a2b3c",
+      "build_variant": "debug",
+      "arch": "x64",
+      "compdb_digest": null,
+      "generated_headers_digest": "genh:lib:2"
+    }
+  ],
+  "evidence_manifest_digest": "manifest:fixture:2"
+}

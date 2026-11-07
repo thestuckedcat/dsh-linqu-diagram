@@ -1,0 +1,8 @@
+# Bundle patch layer: the row loads this package's main entry as the host half
+# (a plain Cordis plugin). The `dsh.client` declaration in package.json makes
+# the Web app load ./plugin/client.js as the browser half. The client half
+# registers the `main` panel key `local-diagrams`; the Host half owns the
+# authenticated `/local-diagrams` RPC channel and the document store.
+- insert:
+    - id: local-diagrams
+      name: dsh-local-diagrams
