@@ -7,7 +7,7 @@
  *
  * bundle id: dsh-local-diagrams
  * tool version: 1
- * sources sha256: dc4605781555144d597383ec844f37c79dad9e655d2fa5a87f226b7f49016a4e
+ * sources sha256: 0696a2fe9a28cdea4dc0ea9b699b4c3e78828e86276a271ae99ebfeaa3529ca2
  * externals: react
  */
 window.__ModuleLoader__.load({
@@ -4230,12 +4230,21 @@ function runCommand(model, command) {
       if (removed.kind !== 'note' && removed.kind !== 'annotation_edge') {
         invalidCommand('remove_annotation only accepts note or annotation_edge items', '$.payload.id');
       }
-      items.splice(index, 1);
+      // A note may target an annotation edge; removing the edge alone would
+      // leave a dangling target and fail composite validation (review R-08).
+      const associated = removed.kind === 'annotation_edge'
+        ? items.filter((item) => item.kind === 'note' && item.target_ref === removed.id)
+        : [];
+      const removedItems = [removed, ...associated];
+      const removedIds = new Set(removedItems.map((item) => item.id));
+      for (let cursor = items.length - 1; cursor >= 0; cursor -= 1) {
+        if (removedIds.has(items[cursor].id)) items.splice(cursor, 1);
+      }
       return {
         overlay,
-        selection: selection.filter((id) => id !== removed.id),
-        undo: { remove_ids: [], restore_items: [removed] },
-        redo: { remove_ids: [removed.id], restore_items: [] },
+        selection: selection.filter((id) => !removedIds.has(id)),
+        undo: { remove_ids: [], restore_items: clone(removedItems) },
+        redo: { remove_ids: removedItems.map((item) => item.id), restore_items: [] },
       };
     }
     case 'remove_annotation_node': {
@@ -4307,10 +4316,18 @@ function removeAnnotationNode(model, overlay, selection, payload) {
 
   /** @type {Set<string>} */
   const associatedIds = new Set();
+  /** @type {Set<string>} */
+  const removedEdgeIds = new Set();
+  for (const item of items) {
+    if (item.kind === 'annotation_edge' && (item.from === nodeId || item.to === nodeId)) removedEdgeIds.add(item.id);
+  }
   for (const item of items) {
     if (item.id === nodeId) continue;
-    if (item.kind === 'annotation_edge' && (item.from === nodeId || item.to === nodeId)) associatedIds.add(item.id);
-    else if (item.kind === 'note' && item.target_ref === nodeId) associatedIds.add(item.id);
+    if (removedEdgeIds.has(item.id)) {
+      associatedIds.add(item.id);
+      continue;
+    }
+    if (item.kind === 'note' && (item.target_ref === nodeId || removedEdgeIds.has(item.target_ref))) associatedIds.add(item.id);
     else if (item.kind === 'layout' && item.target_ref === nodeId) associatedIds.add(item.id);
     else if (item.kind === 'visibility' && item.target_ref === nodeId) associatedIds.add(item.id);
   }
@@ -6518,6 +6535,11 @@ function LocalDiagramsPanel(props) {
         stopPolling();
         return;
       }
+      const documentId = sessionRef.current?.document_id;
+      if (typeof documentId !== 'string' || documentId.length === 0) {
+        stopPolling();
+        return;
+      }
       inFlight = true;
       attempts += 1;
       const requestResult = buildRequest({
@@ -6525,7 +6547,7 @@ function LocalDiagramsPanel(props) {
         context_ref: active.context_ref,
         expected_scope_generation: active.expected_scope_generation,
         view_epoch: viewEpochRef.current,
-        input: { operation_ref: operationRef },
+        input: { operation_ref: operationRef, document_id: documentId },
       });
       if (requestResult.ok !== true) {
         inFlight = false;
@@ -6652,7 +6674,7 @@ function LocalDiagramsPanel(props) {
 
   /* ------------------------------- conflict ------------------------------- */
 
-  const reopenWithLocalOverlay = useCallback(async (localOverlay) => {
+  const reopenDocument = useCallback(async (localOverlay = null) => {
     const active = activeRef.current;
     if (active === null || !transport) return false;
     const epoch = viewEpochRef.current + 1;
@@ -6679,20 +6701,28 @@ function LocalDiagramsPanel(props) {
     }
     const data = interpreted.data;
     try {
-      // Keep both: rebase the local draft onto the reopened Host base, then
-      // merge the Host's current overlay items so neither side is lost. An
-      // invalid merged composite falls back to the Host overlay only.
-      const rebased = rebaseOverlay(data.base_spec, localOverlay);
-      const mergedOverlay = {
-        ...rebased.overlay,
-        items: mergeOverlayItems(data.overlay, rebased.overlay),
-      };
       /** @type {any} */
       let nextModel;
-      try {
-        nextModel = createEditorModel(data.base_spec, mergedOverlay);
-      } catch {
+      let mergedOrphaned = 0;
+      if (localOverlay === null) {
+        // Plain reopen: discard the local draft entirely and adopt the Host
+        // revision (review R-05; the UI text promises exactly this).
         nextModel = createEditorModel(data.base_spec, data.overlay);
+      } else {
+        // Keep both: rebase the local draft onto the reopened Host base, then
+        // merge the Host's current overlay items so neither side is lost. An
+        // invalid merged composite falls back to the Host overlay only.
+        const rebased = rebaseOverlay(data.base_spec, localOverlay);
+        mergedOrphaned = rebased.orphaned.length;
+        const mergedOverlay = {
+          ...rebased.overlay,
+          items: mergeOverlayItems(data.overlay, rebased.overlay),
+        };
+        try {
+          nextModel = createEditorModel(data.base_spec, mergedOverlay);
+        } catch {
+          nextModel = createEditorModel(data.base_spec, data.overlay);
+        }
       }
       const nextSession = {
         document_id: data.document_id,
@@ -6708,13 +6738,17 @@ function LocalDiagramsPanel(props) {
       setModel(nextModel);
       modelRef.current = nextModel;
       setConflict(null);
-      setSaveStatus('dirty');
-      showNotice(
-        rebased.orphaned.length > 0 ? 'error' : 'info',
-        rebased.orphaned.length > 0
-          ? `${rebased.orphaned.length} annotation(s) lost their target and are preserved as orphaned.`
-          : 'Local annotations were rebased and merged onto the current Host revision.',
-      );
+      setSaveStatus(localOverlay === null ? 'clean' : 'dirty');
+      if (localOverlay === null) {
+        showNotice('info', 'Reopened the current Host revision; the local draft was discarded.');
+      } else {
+        showNotice(
+          mergedOrphaned > 0 ? 'error' : 'info',
+          mergedOrphaned > 0
+            ? `${mergedOrphaned} annotation(s) lost their target and are preserved as orphaned.`
+            : 'Local annotations were rebased and merged onto the current Host revision.',
+        );
+      }
       return true;
     } catch {
       showNotice('error', 'The local annotations could not be rebased onto the current revision.');
@@ -6758,13 +6792,18 @@ function LocalDiagramsPanel(props) {
       showNotice('success', `Draft ${plan.filename} downloaded locally.`);
       return;
     }
-    const reopened = await reopenWithLocalOverlay(modelRef.current.overlay);
+    if (resolution.action === 'reopen') {
+      // Discard the local draft and reload the Host revision; no merge.
+      await reopenDocument(null);
+      return;
+    }
+    const reopened = await reopenDocument(modelRef.current.overlay);
     if (reopened && resolution.action === 'reopen_then_resave') {
       // The Host keeps its conflicting revision immutable; saving the rebased
       // overlay as the next revision preserves both sides.
       await saveDocument();
     }
-  }, [conflict, reopenWithLocalOverlay, saveDocument, showNotice]);
+  }, [conflict, reopenDocument, saveDocument, showNotice]);
 
   /* -------------------------------- export -------------------------------- */
 
@@ -6827,7 +6866,7 @@ function LocalDiagramsPanel(props) {
         context_ref: active.context_ref,
         expected_scope_generation: active.expected_scope_generation,
         view_epoch: viewEpochRef.current,
-        input: { editor_session_ref: current.editor_session_ref },
+        input: { editor_session_ref: current.editor_session_ref, document_id: current.document_id },
       });
       if (requestResult.ok === true) {
         await callEndpoint(transport, 'session.close', requestResult.request, undefined, active.expected_scope_generation);

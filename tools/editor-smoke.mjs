@@ -520,16 +520,16 @@ async function main(argv) {
     // 9. operation.get replay record
     await check('operation.get reports the saved operation', async () => {
       if (typeof saveNOperation !== 'string') throw new Error('no save operation id recorded');
-      const { interpreted } = await callEndpoint('operation.get', { operation_ref: saveNOperation }, 6);
+      const { interpreted } = await callEndpoint('operation.get', { operation_ref: saveNOperation, document_id: sessions.C.document_id }, 6);
       if (interpreted.kind !== 'ok' || interpreted.data.state !== 'saved') throw new Error('operation.get did not report saved');
       return { state: interpreted.data.state, generation: interpreted.data.version?.generation ?? null };
     });
 
     // 10. close sessions
     await check('session.close revokes the editor session (close is not delete)', async () => {
-      const closed = await callEndpoint('session.close', { editor_session_ref: sessions.C.editor_session_ref }, 7);
+      const closed = await callEndpoint('session.close', { editor_session_ref: sessions.C.editor_session_ref, document_id: sessions.C.document_id }, 7);
       if (closed.interpreted.kind !== 'ok' || closed.interpreted.data.closed !== true) throw new Error('close did not revoke the session');
-      const again = await callEndpoint('session.close', { editor_session_ref: sessions.C.editor_session_ref }, 8);
+      const again = await callEndpoint('session.close', { editor_session_ref: sessions.C.editor_session_ref, document_id: sessions.C.document_id }, 8);
       if (again.interpreted.kind !== 'ok' || again.interpreted.data.closed !== false) throw new Error('second close must report closed:false');
       return { closed: true, second_close_closed: false, document_preserved: fs.existsSync(path.join(fixtureState.dataRoot, 'documents', 'doc-001', 'pointer.json')) };
     });

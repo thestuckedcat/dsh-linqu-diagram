@@ -593,11 +593,14 @@ function validateEndpointInput(endpoint, input) {
     };
   }
   if (endpoint === 'operation.get') {
-    if (!hasExactKeys(input, ['operation_ref']) || !isId(input.operation_ref)) return invalidInput();
-    return { ok: true, input: { operation_ref: input.operation_ref } };
+    // Review R-10: bind the operation lookup to the document it belongs to;
+    // the shell's context_ref + this document_id scope the journal scan.
+    if (!hasExactKeys(input, ['operation_ref', 'document_id']) || !isId(input.operation_ref) || !isId(input.document_id)) return invalidInput();
+    return { ok: true, input: { operation_ref: input.operation_ref, document_id: input.document_id } };
   }
   if (endpoint === 'session.close') {
-    if (!hasExactKeys(input, ['editor_session_ref'])) return invalidInput();
+    if (!hasExactKeys(input, ['editor_session_ref', 'document_id'])) return invalidInput();
+    if (!isId(input.document_id)) return invalidInput();
     if (
       typeof input.editor_session_ref !== 'string' ||
       input.editor_session_ref.length > 128 ||
@@ -605,7 +608,7 @@ function validateEndpointInput(endpoint, input) {
     ) {
       return invalidInput();
     }
-    return { ok: true, input: { editor_session_ref: input.editor_session_ref } };
+    return { ok: true, input: { editor_session_ref: input.editor_session_ref, document_id: input.document_id } };
   }
   return { ok: false, reason_code: 'UNKNOWN_ENDPOINT' };
 }
@@ -849,7 +852,7 @@ export function createLocalDiagramsService(options) {
       });
     }
     if (endpoint === 'operation.get') {
-      const result = await store.getOperation({ operation_ref: input.operation_ref }, caller);
+      const result = await store.getOperation({ operation_ref: input.operation_ref, document_id: input.document_id }, caller);
       return normalizeBusinessResponse({
         endpoint,
         operation_id: shell.operation_id,
@@ -859,7 +862,7 @@ export function createLocalDiagramsService(options) {
       });
     }
     if (endpoint === 'session.close') {
-      const result = await store.closeEditorSession({ editor_session_ref: input.editor_session_ref }, caller);
+      const result = await store.closeEditorSession({ editor_session_ref: input.editor_session_ref, document_id: input.document_id }, caller);
       return normalizeBusinessResponse({
         endpoint,
         operation_id: shell.operation_id,

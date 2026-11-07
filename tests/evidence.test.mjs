@@ -78,7 +78,23 @@ test('evidence fixture: four edge classes survive into a valid spec', () => {
   const spec = evidenceSpec();
   assert.equal(spec.mode, 'evidence');
   assert.equal(spec.sources.length, 1);
-  assert.deepEqual(spec.sources[0], sourceIdentity);
+  // Root refs are stored as opaque `root-ref:<digest>` references (review R-09),
+  // never as local filesystem paths; every other identity field is carried over.
+  assert.equal(spec.sources[0].source_id, sourceIdentity.source_id);
+  assert.equal(spec.sources[0].scope_ref, sourceIdentity.scope_ref);
+  assert.equal(spec.sources[0].snapshot_ref, sourceIdentity.snapshot_ref);
+  assert.equal(spec.sources[0].evidence_manifest_digest, sourceIdentity.evidence_manifest_digest);
+  assert.equal(spec.sources[0].repos.length, sourceIdentity.repos.length);
+  for (const repo of spec.sources[0].repos) {
+    assert.match(repo.root_ref, /^root-ref:[0-9a-f]{16}$/u);
+    const original = sourceIdentity.repos.find((candidate) => candidate.repo_id === repo.repo_id);
+    assert.equal(repo.revision, original.revision);
+    assert.equal(repo.dirty_digest, original.dirty_digest);
+    assert.equal(repo.build_variant, original.build_variant);
+    assert.equal(repo.arch, original.arch);
+    assert.equal(repo.compdb_digest, original.compdb_digest);
+    assert.equal(repo.generated_headers_digest, original.generated_headers_digest);
+  }
   assert.equal(validateDiagramSpec(spec).ok, true, JSON.stringify(validateDiagramSpec(spec).errors ?? []));
   assert.equal(spec.nodes.length, 5);
   assert.equal(spec.edges.length, 4);

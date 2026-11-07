@@ -79,6 +79,8 @@ tests/fixtures/{snapshot,malicious,conflicts}/
 docs/{implementation-route,compatibility,mechanisms}.md
 ```
 
+> 实现注：以上是设计期文件职责。实际实现为 `plugin/index.mjs`（Host 入口）、`plugin/client.js`（由 `ui/*.mjs` + 选定 `src/*.mjs` 经 `tools/build-client.mjs` 确定性内联生成的 rc.5 懒 CJS bundle）、`ui/*.mjs`（纯函数/模型，无 TSX 构建链）、`src/editor/document-store.mjs` 合并原 save 职责；另有 `src/events.mjs`（03 事件消费）、`src/source-identity.mjs`（不透明 root 引用）、`src/plugin/service.mjs`、`tools/{build-client,registry,record-evidence}.mjs`。偏差与理由见[兼容矩阵](compatibility.md)。
+
 `render`和skill可以独立使用，无Host凭据和会话修改权限；编辑器plugin可单装，只打开用户选定的登记文档。08仅入口，不持有XML或替06保存。04是证据生产者，可用fixture/manifest合同独立开发；04尚未实现不阻塞06概念图和确定性renderer。
 
 ## 4. 数据schema：事实、推断与注释不混层
@@ -250,7 +252,7 @@ value始终纯文本，禁止HTML标签/事件属性；style解析为键值白�
 
 ## 9. Host/UI和模型出口
 
-### DIA-RPC-01：已核传输与文档许可（确定设计，待实现）
+### DIA-RPC-01：已核传输与文档许可（设计已实现：组件级自测通过，真实 Host 待验证）
 
 真实rc.5 Host使用`ctx.connection.rpc.handle('/local-diagrams',async(endpoint,payload,signal,peer)=>...)`，client使用`ctx.connection.rpc.call('/local-diagrams',endpoint,payload,signal)`。出处为`dsh-client-connection/lib/index.js`（SHA256 `0ebcca7583e082716f79b0b55bc1749d48269cc8db2989b043b321b57abd3684`）724、855—871、910及`lib/client.browser.js`（SHA256 `dfc3544eb894c74b340a4c4c63a8c125fd2e983df9efed5885712574af994e62`）1212。注册归fiber所有，卸载解除channel并撤销editor sessions，不将内部函数/MessagePort通过JSON传输。
 

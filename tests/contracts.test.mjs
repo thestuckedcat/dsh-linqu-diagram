@@ -706,6 +706,11 @@ test('composite: overlay item ids must not collide with base node/edge ids', () 
     if (edge.from === originalId) edge.from = 'ann:base-node';
     if (edge.to === originalId) edge.to = 'ann:base-node';
   }
+  // The generated spec now carries deterministic layout positions (review R-01),
+  // so a renamed base node must keep its position target in sync.
+  for (const position of spec.layout?.positions ?? []) {
+    if (position.node_id === originalId) position.node_id = 'ann:base-node';
+  }
   assert.equal(validateDiagramSpec(spec).ok, true);
   const overlay = evidenceOverlay(spec, [
     { id: 'ann:base-node', kind: 'note', target_ref: null, text: 'collision', position: samplePosition() },

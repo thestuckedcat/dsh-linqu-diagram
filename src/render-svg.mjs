@@ -268,7 +268,7 @@ function routeForRender(spec, layout, entities) {
   /** @type {Map<string, any>} */ const routes = new Map();
   const baseSpec = { nodes: spec.nodes ?? [], edges: spec.edges ?? [] };
   if (baseSpec.nodes.length > 0) {
-    const baseLayout = layout ?? layoutDiagram(spec);
+    const baseLayout = layout ?? layoutDiagram(spec, { direction: spec.layout?.direction === 'TB' ? 'TB' : 'LR' });
     for (const route of routeEdges(baseSpec, baseLayout)) routes.set(route.edge_id, route);
   }
   for (const edge of entities.edges.values()) {
@@ -494,7 +494,7 @@ export function renderSvg(spec, options = {}) {
   if (overlay !== null && (typeof overlay !== 'object' || Array.isArray(overlay))) {
     throw new DiagramError('INVALID_OVERLAY', 'overlay must be an object');
   }
-  const layout = options.layout ?? layoutDiagram(spec);
+  const layout = options.layout ?? layoutDiagram(spec, { direction: spec.layout?.direction === 'TB' ? 'TB' : 'LR' });
   const entities = collectEntities(spec, overlay, layout);
   const routes = routeForRender(spec, layout, entities);
   /** @type {Map<string, any>} */ const drawnNodes = new Map();

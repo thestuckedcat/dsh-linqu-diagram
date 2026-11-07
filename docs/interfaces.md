@@ -49,6 +49,7 @@ export function toDiagram(input, policy = {}) -> {status:'ok', spec} | {status:'
 // input: {source_identity, evidence_subset, conceptual_input?}
 // evidence_subset: {atlas_version?, nodes:[{id,label,kind,evidence_refs,description}], edges:[{id,from,to,kind,certainty,label,evidence_refs,explanation}], coverage?}
 // conceptual_input: {title, scope_ref, nodes:[{id,label,kind}], edges:[{from,to,kind,label,description}]}
+// policy 额外：verify_evidence?: (ref) => {ok:true}|{ok:false,reason}; 未提供时 coverage 记 structural-only
 export function emptyConceptualSpec(input, policy = {}) -> DiagramSpecV1
 export function rendererRef(policy = {}) -> string   // 默认 'builtin:renderer-v1'
 // source-state.mjs
@@ -56,7 +57,7 @@ export function validateSource(spec, currentIdentities) -> {state:'current'|'sta
 export function compareIdentity(known, current) -> {equal:boolean, changed_refs:string[], reasons:string[]}
 ```
 
-规则：`toDiagram` evidence 模式逐边保留 `certainty`，`reference` 不得升级为 `call`；`origin=evidence` 且 `certainty=exact` 的边必须有 `evidence_refs`，且 certainty 不得高于 evidence_refs 来源级别（policy 可注入 `max_certainty_by_evidence`，默认 exact 证据→exact、其余不提升）。手工/概念边 `origin=annotation`。ID 缺失时由 label+scope 生成局部 ID 并加 `local:` 前缀，不称为稳定代码实体。`coverage.complete` v1 恒 `false`。超限返回 `invalid`/`LIMIT_EXCEEDED`，或按 policy `truncate:true` 明确截断并在 `coverage.truncated/omitted_*` 记录。`source_state` 生成时按 `currentIdentities`（缺省则 `unknown`）计算；`validateSource` 只比较身份，不比较代码关系。
+规则：`toDiagram` evidence 模式逐边保留 `certainty`，`reference` 不得升级为 `call`；`origin=evidence` 且 `certainty=exact` 的边必须有结构合法的 `evidence_refs`（repo 已声明、相对安全路径、行号区间、非空 digest），且 certainty 不得高于 evidence_refs 来源级别（policy 可注入 `max_certainty_by_evidence`，默认 exact 证据→exact、其余不提升）。**内容真实性不靠 schema 保证**：默认只结构校验并在 `coverage.notes` 标记 `structurally validated only`；`policy.verify_evidence` 被提供时逐 ref 调用，失败整图 `INVALID_SPEC`。生成结束调用 `layoutDiagram` 并把确定性 positions 写入 `spec.layout`（渲染、`.drawio`、编辑器都基于真实坐标）；spec.sources 的 `root_ref` 存为 `root-ref:<16 hex>` 不透明引用，不持久化本机路径。手工/概念边 `origin=annotation`。ID 缺失时由 label+scope 生成局部 ID 并加 `local:` 前缀，不称为稳定代码实体。`coverage.complete` v1 恒 `false`。超限返回 `invalid`/`LIMIT_EXCEEDED`，或按 policy `truncate:true` 明确截断并在 `coverage.truncated/omitted_*` 记录。`source_state` 生成时按 `currentIdentities`（缺省则 `unknown`）计算；`validateSource` 只比较身份，不比较代码关系。
 
 ## 3. `src/source-lock.mjs` + `src/runner.mjs`（owner: outlet）
 
@@ -179,13 +180,19 @@ export function createLocalDiagramsService({registry, store, clock, limits}) -> 
 }
 export function normalizeBusinessResponse(result) -> BusinessResponse  // 固定 code 映射，杜绝原文/stack/路径外泄
 export const ENDPOINTS = ['document.open','document.save','document.export','operation.get','session.close'];
+// 端到端 input 关键字段（RPC 外壳 input，闭合校验）：
+//   document.open    {document_ref}
+//   document.save    {document_id, editor_session_ref, expected_version, xml, overlay}
+//   document.export  {document_id, version, output_ref, format}
+//   operation.get    {operation_ref, document_id}          // R-10：绑定所属文档
+//   session.close    {editor_session_ref, document_id}     // R-10：绑定所属文档
 // plugin/index.mjs
 export const name = 'local-diagrams';
 export const inject = ['connection'];
 export function apply(ctx) -> void
 ```
 
-`plugin/index.mjs` 只做 rc.5 薄适配：`ctx.connection.rpc.handle('/local-diagrams', (endpoint, payload, signal, peer) => service.handle(...))`，注册归 fiber（`ctx.effect`/返回值），卸载时撤销 editor sessions 并解除 channel；不接受 client 自造 grant，`peer.principal.kind==='owner'` 才处理。请求外壳 `{schema_version:1, operation_id, context_ref, expected_scope_generation, view_epoch, input}`；响应闭合 union `{schema_version, operation_id, view_epoch, scope_generation, status:'ok', data}` 或同外壳加 `status:'denied'|'stale'|'invalid'|'conflict'|'unavailable'|'failed', reason_code`；异常一律固定 `INTERNAL_FAILURE`，不返回真实路径/XML 原文/stack/配置。`document.save` 先用自己的 base 校验 overlay（含 orphaned），再确定性生成 canonical XML，把 client XML 解析为白名单结构后与 canonical 语义比较，不一致 `INVALID_OVERLAY`。
+`plugin/index.mjs` 只做 rc.5 薄适配：`ctx.connection.rpc.handle('/local-diagrams', (endpoint, payload, signal, peer) => service.handle(...))`，注册归 fiber（`ctx.effect`/返回值），卸载时撤销 editor sessions 并解除 channel；不接受 client 自造 grant，`peer.principal.kind==='owner'` 才处理。请求外壳 `{schema_version:1, operation_id, context_ref, expected_scope_generation, view_epoch, input}`；响应闭合 union `{schema_version, operation_id, view_epoch, scope_generation, status:'ok', data}` 或同外壳加 `status:'denied'|'stale'|'invalid'|'conflict'|'unavailable'|'failed', reason_code`；异常一律固定 `INTERNAL_FAILURE`，不返回 document/store/output 真实路径（base spec 的 `root_ref` 为不透明 `root-ref:<digest>`）、XML 原文、stack、配置。`document.save` 先用自己的 base 校验 overlay（含 orphaned），再确定性生成 canonical XML，把 client XML 解析为白名单结构后与 canonical 语义比较，不一致 `INVALID_OVERLAY`。`document.open` 返回的 base_spec 已带非空确定性 layout positions。
 
 ## 11. `plugin/client.js`、`ui/*.mjs`、`tools/build-client.mjs`（owner: plugin）
 
@@ -195,7 +202,7 @@ export function apply(ctx) -> void
 
 ## 12. 测试与工具命令（每个 owner 交付自己的测试）
 
-- `node --test tests/` 必须全绿；单文件测试文件名：`tests/evidence.test.mjs`、`source-state.test.mjs`、`source-lock.test.mjs`、`runner.test.mjs`、`layout.test.mjs`、`render.test.mjs`、`assets.test.mjs`、`archive.test.mjs`、`xml.test.mjs`、`import.test.mjs`、`editor-model.test.mjs`、`bridge.test.mjs`、`access.test.mjs`、`save.test.mjs`、`paths.test.mjs`、`journal.test.mjs`、`service.test.mjs`、`plugin-index.test.mjs`、`client-bundle.test.mjs`、`descriptor.test.mjs`、`interop.test.mjs`、`integration.test.mjs`。本轮实际为 25 个测试文件 / 340 tests。
+- `node --test tests/` 必须全绿；单文件测试文件名：`tests/evidence.test.mjs`、`source-state.test.mjs`、`source-lock.test.mjs`、`runner.test.mjs`、`layout.test.mjs`、`render.test.mjs`、`assets.test.mjs`、`archive.test.mjs`、`xml.test.mjs`、`import.test.mjs`、`editor-model.test.mjs`、`bridge.test.mjs`、`access.test.mjs`、`save.test.mjs`、`paths.test.mjs`、`journal.test.mjs`、`service.test.mjs`、`plugin-index.test.mjs`、`client-bundle.test.mjs`、`descriptor.test.mjs`、`interop.test.mjs`、`integration.test.mjs`、`review-regressions.test.mjs`。最终计数见 `evidence/final-test-run.json`。
 - 工具：`tools/validate.mjs`（schema/fixture 校验）、`tools/render.mjs`、`tools/network-smoke.mjs`、`tools/editor-smoke.mjs`、`tools/build-client.mjs`、`tools/check-runtime.mjs`、`tools/registry.mjs`、`tools/record-evidence.mjs`（把实际执行的命令写成 `evidence/*.json`）。
 - 测试不得写真实用户目录、不得联网、不得依赖真实时钟/随机；临时目录用 `node:fs.mkdtemp`。证据记录写到 `evidence/`（JSON/TAP，含命令、exit、pass/fail/skip、limitations）。
 

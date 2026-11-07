@@ -36,6 +36,14 @@ async function runCheck(label, check) {
     const value = await check();
     if (value === undefined || value === true) return { name: label, ok: true };
     if (value === false) return { name: label, ok: false, errors: [{ message: 'check returned false' }] };
+    // Checks may return their own `{ok, errors?}` result. Honour it instead of
+    // treating every object as a pass (independent review R-03 false-green).
+    if (value !== null && typeof value === 'object' && typeof value.ok === 'boolean') {
+      if (value.ok !== true) {
+        return { name: label, ok: false, errors: Array.isArray(value.errors) && value.errors.length > 0 ? value.errors : [{ message: 'check returned ok:false' }] };
+      }
+      return { name: label, ok: true, ...(value.detail === undefined ? {} : { detail: value.detail }) };
+    }
     return { name: label, ok: true, detail: value };
   } catch (error) {
     return { name: label, ok: false, errors: [{ message: String(error?.message ?? error) }] };
@@ -45,6 +53,24 @@ async function runCheck(label, check) {
 /** @param {string} label @param {{ok:boolean, errors?:any[]}} result */
 function fromResult(label, result) {
   return result.ok ? { name: label, ok: true } : { name: label, ok: false, errors: result.errors ?? [] };
+}
+
+/**
+ * A schema root is object-describing when it is `type:object` (or a type array
+ * containing object), or a closed union whose every branch is object-like. The
+ * RPC response / editor command schemas are intentional root-level unions.
+ * @param {any} schema
+ * @returns {boolean}
+ */
+function schemaRootDescribesObject(schema) {
+  if (schema === null || typeof schema !== 'object') return false;
+  if (schema.type === 'object') return true;
+  if (Array.isArray(schema.type) && schema.type.includes('object')) return true;
+  for (const key of ['oneOf', 'anyOf', 'allOf']) {
+    const branches = schema[key];
+    if (Array.isArray(branches) && branches.length > 0 && branches.every((branch) => schemaRootDescribesObject(branch))) return true;
+  }
+  return false;
 }
 
 async function main() {
@@ -64,7 +90,7 @@ async function main() {
           errors.push({ schema: name, message: String(error.message) });
           continue;
         }
-        if (parsed.type !== 'object') errors.push({ schema: name, message: 'schema root must be type object' });
+        if (!schemaRootDescribesObject(parsed)) errors.push({ schema: name, message: 'schema root must describe an object (type:object or oneOf/anyOf/allOf of object branches)' });
         if (!('$schema' in parsed)) errors.push({ schema: name, message: 'missing $schema' });
       }
       if (errors.length > 0) return { ok: false, errors };

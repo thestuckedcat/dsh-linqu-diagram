@@ -29,10 +29,12 @@ whenToUse: 用户要把一条调用/数据/依赖路径或一组模块画成图�
    - 概念模式：仅当用户明确描述关系时写 `conceptual-input.json`（`{title,scope_ref,nodes:[{id,label,kind}],edges:[{from,to,kind,label,description}]}`）；节点/边来自用户原话，不补事实。
    - 两者都没有 → 停下要证据或请用户描述，不生成空壳图。
 3. **渲染**（项目根、PATH `node`；`--out` 指向临时或用户指定目录，不写仓库）：
-   - 证据：`node tools/render.mjs --evidence <EvidenceSubset.json> --source-identity <SourceIdentityV1.json> [--current-identities <identities.json>] --renderer builtin --out <dir>`
+   - 证据：`node tools/render.mjs --evidence <EvidenceSubset.json> --source-identity <SourceIdentityV1.json> [--current-identities <identities.json>] [--verify-evidence-roots <repo-roots.json>] --renderer builtin --out <dir>`
    - 概念：`node tools/render.mjs --conceptual <conceptual-input.json> --renderer builtin --out <dir>`
+   - 外部/历史 `.drawio` 只按概念层导入：`node tools/render.mjs --import-drawio <file.drawio> --renderer builtin --out <dir>`（压缩/未知高级形状会 `UNSUPPORTED`，不要绕过）。
    - 可选覆盖 `--scope-ref/--title/--diagram-id/--revision`；先用 `node tools/render.mjs --help` 确认当前构建参数。
-4. **解析 stdout 的单个 JSON 摘要**：成功 = `exit_code=0` 且 `status=saved` 且 `checks{files:7, expected_files:7, resource_manifest, manifest_verify, offline_html, remote_refs:0}` 全为真。非 0 或 `status!=saved` 时引用 `code`/`warnings` 并停止；不换渲染器、不改远程输入重试。
+   - **证据内容真实性**：只有传了 `--verify-evidence-roots`（本地 `{repo_id: root}` JSON）时 CLI 才逐 ref 校验文件存在/行号/根内路径；否则摘要/coverage 会标 `structural-only`。用户证据未内容核验时，汇报必须写“结构校验，未内容验证”，不得声称已核实来源。
+4. **解析 stdout 的单个 JSON 摘要**：成功 = `exit_code=0` 且 `status=saved` 且 `checks{files:7, expected_files:7, resource_manifest, manifest_verify, offline_html, remote_refs:0}` 全为真。非 0 或 `status!=saved` 时引用 `code`/`warnings` 并停止；不换渲染器、不改远程输入重试。摘要含 `evidence_verification: 'structural-only'|'trusted-local-roots'`，如实转述。
 5. **按需计数**：要 exact/may/unresolved/unknown 数量时，只读 `artifact_ref/diagram-spec.json` 的 `edges[].certainty` 统计；不从摘要猜。`truncated`/`source_state` 以摘要为准，`warnings` 原样保留。
 6. **按固定结构汇报**：`mode/scope/source_state/nodes/edges/truncated/warnings/manifest_digest/artifact_ref`；可给的逐边计数；未验证项；一条下一步。模板与字段说明见 [references/contracts.md](references/contracts.md)。
 

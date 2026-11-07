@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "import-drawio",
+  "command": "node tools/render.mjs --import-drawio tests/fixtures/drawio/external-basic.drawio --renderer builtin --out ./scratch-output",
+  "runtime": "node v26.13.0 (win32 x64)",
+  "source_lock_digest": "91438d9a060faf9eb8f6bdcf2cbeee196fcf935e822b01ad478fa47c224c3551",
+  "started_at": "2026-11-07T01:28:34.910Z",
+  "finished_at": "2026-11-07T01:28:35.072Z",
+  "exit_code": 0,
+  "spawn_error": null,
+  "pass": null,
+  "fail": null,
+  "skip": 0,
+  "status": "passed",
+  "stdout_tail": "{\n  \"schema_version\": 1,\n  \"command\": \"node tools/render.mjs\",\n  \"status\": \"saved\",\n  \"mode\": \"conceptual\",\n  \"renderer\": \"builtin\",\n  \"source_state\": \"unknown\",\n  \"nodes\": 0,\n  \"edges\": 0,\n  \"truncated\": false,\n  \"evidence_verification\": null,\n  \"overlay_items\": 4,\n  \"import_warnings\": [\n    \"data_metadata_display_only\"\n  ],\n  \"artifact_ref\": \"E:\\\\dsh\\\\plugin\\\\06-local-diagrams\\\\scratch-output\\\\import\\\\artifact-c3358fc5aea451c04612f389\",\n  \"manifest_digest\": \"7cd3172a0011725ed4c51c31876ab565b299ff9c8db8c75fcde62a0f9dba2d17\",\n  \"warnings\": [\n    \"coverage.complete=false：v1 固定不承诺全仓完整。\",\n    \"source_state=unknown：缺少当前登记身份，不能当作当前快照。\",\n    \"data_metadata_display_only\"\n  ],\n  \"checks\": {\n    \"files\": 7,\n    \"expected_files\": 7,\n    \"resource_manifest\": true,\n    \"manifest_verify\": true,\n    \"offline_html\": true,\n    \"remote_refs\": 0\n  },\n  \"exit_code\": 0\n}\n",
+  "stderr_tail": "",
+  "limitations": [
+    "Component-level run on synthetic fixtures; no installed Host/browser/OS outlet claim."
+  ]
+}

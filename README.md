@@ -7,15 +7,15 @@
 ## 状态
 
 - 设计：DIA-DESIGN-2（2026-11-07），已冻结可编码接口。
-- 实现：编码完成（DeepSeek Harness 0.2.1-rc.5 薄适配版本）；组件级自测见 [evidence/README.md](evidence/README.md) 与 [最终运行摘要](evidence/final-summary.md)。
+- 实现：编码完成（DeepSeek Harness 0.2.1-rc.5 薄适配版本）；组件级自测见 [evidence/README.md](evidence/README.md) 与 [最终运行摘要](evidence/final-summary.md)；独立评审与修复见 [docs/review.md](docs/review.md)。
 - 本轮实际运行（2026-11-07，Node v26.13.0 win32/x64，合成 fixture、临时目录、无网络）：
-  - `node --test tests/` → **340 tests / 340 pass / 0 fail / 0 skip**（25 个测试文件，含集成旅程）。
-  - `node tools/render.mjs --fixture` 与 `--evidence ...` → `saved`、7 文件图包、`remote_refs=0`；fixture 重复渲染 manifest 摘要一致（语义幂等）。
+  - `node --test tests/` → **349 tests / 349 pass / 0 fail / 0 skip**（25 个测试文件，含集成旅程与评审回归）。
+  - `node tools/render.mjs --fixture`、`--evidence`、`--conceptual`、`--import-drawio` → `saved`、7 文件图包、`remote_refs=0`；fixture 重复渲染 manifest 摘要一致（语义幂等）。
   - `node tools/network-smoke.mjs --isolated --renderers builtin` → `attempted_count=0`（守卫覆盖 fetch/WebSocket/net/dns/http/https/http2 等）。
   - `node tools/editor-smoke.mjs --isolated --fixture` → 12/12 检查通过、13 次服务级 RPC、0 未登记网络尝试（transport double，非真实 HTTP Host）。
-  - `node tools/build-client.mjs --check` → 与 `ui/` 源码同步；`node tools/validate.mjs` → 7/7 通过；`node tools/check-runtime.mjs` → 版本/宿主身份门槛通过。
+  - `node tools/build-client.mjs --check` → 与 `ui/` 源码同步；`node tools/validate.mjs` → 真实 7/7 通过（修复评审 R-03 假绿）；`node tools/check-runtime.mjs` → 版本/宿主身份门槛通过。
 - 交付边界（必须如实理解）：
-  - **已自测**：schema/证据/stale、确定性布局与 SVG/HTML、原子图包、受限 XML 与外部导入降级、编辑命令/undo/redo、文档版本/冲突/journal、RPC 服务与 client bundle 的组件级行为。
+  - **已自测**：schema/证据/stale（含可选内容 verifier）、确定性布局与 SVG/HTML、原子图包（含字节校验恢复）、受限 XML 与外部导入降级、编辑命令/undo/redo、文档版本/冲突/journal/scope 代次撤销、RPC 服务（owner/文档绑定/脱敏）与 client bundle 的组件级行为。
   - **未自测（外部门禁）**：未安装到用户 Harness profile，未在真实浏览器验证 main 面板 CSP/DOM 旅程，未验证真实登录 Peer→channel→registry→document-store 全链路，未做 OS 级全进程出口审计。按设计，这些通过前**不能宣称完整首版在真实 Host 可用**。
   - 未运行 Atlas doctor/索引；未下载或执行 Archify/Drawio 构件（见 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)）。
 

@@ -10,10 +10,14 @@ node tools/render.mjs --help
 
 # 证据模式（两项必填：EvidenceSubset + SourceIdentityV1；current identities 可选）
 node tools/render.mjs --evidence <EvidenceSubset.json> --source-identity <SourceIdentityV1.json> \
-  [--current-identities <SourceIdentityV1-or-array.json>] --renderer builtin --out <dir>
+  [--current-identities <SourceIdentityV1-or-array.json>] [--verify-evidence-roots <repo-roots.json>] \
+  --renderer builtin --out <dir>
 
 # 概念模式（仅在用户明确描述了关系时；输入形状见 §4）
 node tools/render.mjs --conceptual <conceptual-input.json> --renderer builtin --out <dir>
+
+# 外部/历史 .drawio：只按无可信证据的 concept 层导入（压缩/未知高级形状 -> UNSUPPORTED）
+node tools/render.mjs --import-drawio <file.drawio> --renderer builtin --out <dir>
 
 # 可选覆盖（只用于 evidence/conceptual）：--scope-ref <text> --title <text> --diagram-id <id> --revision <n>
 
@@ -25,6 +29,7 @@ node tools/render.mjs --fixture --conceptual --renderer builtin --out <dir>
 - 只支持 `--renderer builtin`；`atlas/archify` 退出 1、`status=failed`、`code=UNSUPPORTED`，不会静默回退。
 - 输入文件只能是本地路径；`http(s)/file:/data:/blob:/about:/javascript:`、UNC（`//`、`\\`）和控制字符会被拒绝（退出 1、`code=INVALID_INPUT`）。
 - `--evidence` 必须同时给 `--source-identity`；`--current-identities` 决定 `source_state=current|stale`，省略即 `unknown`。
+- **证据内容核验**：不传 `--verify-evidence-roots` 时 CLI 只做结构校验，摘要 `evidence_verification=structural-only`、coverage 带 `structurally validated only`；传本地 `{repo_id: 本机 root}` JSON 后逐 ref 校验文件存在/行号/根内路径（`trusted-local-roots`），失败退出 1、`code=INVALID_SPEC`。`content_digest` 的 Atlas 语义不在本 CLI 内重算，不要声称已核 digest。
 - 输出：`--out` 根下 `<mode>/artifact-<id>/` 七文件图包 + `.operations/<operation_id>.json` 幂等记录；stdout 恰好一个 JSON 摘要。
 - 本地出口证据命令：`node tools/check-runtime.mjs`、`node tools/network-smoke.mjs --isolated --renderers builtin`。
 
@@ -36,7 +41,7 @@ node tools/render.mjs --fixture --conceptual --renderer builtin --out <dir>
 
 ## 2. stdout JSON 摘要（成功/失败都只有一个对象）
 
-必有字段：`schema_version, command, status, mode, renderer, source_state, nodes, edges, truncated, artifact_ref, manifest_digest, warnings[], exit_code`；失败另有 `code`；成功另有 `checks{files, expected_files, resource_manifest, manifest_verify, offline_html, remote_refs}`。
+必有字段：`schema_version, command, status, mode, renderer, source_state, nodes, edges, truncated, evidence_verification, overlay_items, artifact_ref, manifest_digest, warnings[], exit_code`；失败另有 `code`；成功另有 `checks{files, expected_files, resource_manifest, manifest_verify, offline_html, remote_refs}`；导入模式另有 `import_warnings[]`。
 
 - 成功判据：`exit_code=0` 且 `status=saved` 且 checks 全真（`files=7=expected_files`、`remote_refs=0`）。
 - `status` 可能为 `saved|failed|conflict|denied|cancelled|outcome_unknown`（archive 透传）；非 saved 时引用 `code`/`warnings` 并停止，不盲重试。

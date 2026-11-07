@@ -527,7 +527,7 @@ async function renderLocalTransaction(request, caller, signal, deps) {
   if (existing.status === 'corrupt') return { status: 'outcome_unknown', code: 'OUTCOME_UNKNOWN' };
 
   // ---- Render everything in memory first (no staging on render failure). ----
-  const layoutResult = layoutDiagram(validatedSpec);
+  const layoutResult = layoutDiagram(validatedSpec, { direction: validatedSpec.layout?.direction === 'TB' ? 'TB' : 'LR' });
   const svgResult = renderSvg(validatedSpec, { overlay: validatedOverlay, layout: layoutResult });
   const createdAt = clock();
   const manifestPreview = { artifact_id: artifactId, spec_digest: specDigestValue };
@@ -661,6 +661,33 @@ async function renderLocalTransaction(request, caller, signal, deps) {
 }
 
 /**
+ * Verify an existing package's payload bytes against its own manifest.
+ * Review R-11: a directory with the right file names but replaced bytes must
+ * never be reported as `saved` or recovered by rename.
+ * @param {object} io
+ * @param {string} directory
+ * @param {any} manifest
+ * @returns {Promise<boolean>}
+ */
+async function verifyArtifactBytes(io, directory, manifest) {
+  const files = Array.isArray(manifest?.files) ? manifest.files : [];
+  if (files.length === 0) return false;
+  for (const file of files) {
+    if (file === null || typeof file !== 'object' || typeof file.relative_path !== 'string') return false;
+    let text;
+    try {
+      text = await io.readFile(path.join(directory, file.relative_path));
+    } catch {
+      return false;
+    }
+    const bytes = Buffer.from(text, 'utf8');
+    if (typeof file.size === 'number' && bytes.byteLength !== file.size) return false;
+    if (typeof file.sha256 === 'string' && sha256Hex(bytes) !== file.sha256) return false;
+  }
+  return true;
+}
+
+/**
  * Inspect an existing immutable artifact directory.
  * @param {object} io
  * @param {string} finalDir
@@ -678,6 +705,7 @@ async function inspectExistingArtifact(io, finalDir) {
     if (!(await pathExists(io, path.join(finalDir, name)))) return { status: 'corrupt' };
   }
   if (!(await pathExists(io, path.join(finalDir, 'manifest.json')))) return { status: 'corrupt' };
+  if (!(await verifyArtifactBytes(io, finalDir, manifest.manifest))) return { status: 'corrupt' };
   return {
     status: 'saved',
     result: {
@@ -697,6 +725,7 @@ async function tryRecoverStaging(io, stagingDir, finalDir) {
   for (const name of payloadNames) {
     if (!(await pathExists(io, path.join(stagingDir, name)))) return false;
   }
+  if (!(await verifyArtifactBytes(io, stagingDir, manifest.manifest))) return false;
   try {
     await io.rename(stagingDir, finalDir);
     return true;

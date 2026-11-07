@@ -1791,7 +1791,7 @@ export function createDocumentStore(options) {
             try {
               const layoutModule = await import('../layout.mjs');
               const svgModule = await import('../render-svg.mjs');
-              const layout = layoutModule.layoutDiagram(state.base_spec);
+              const layout = layoutModule.layoutDiagram(state.base_spec, { direction: state.base_spec.layout?.direction === 'TB' ? 'TB' : 'LR' });
               const rendered = svgModule.renderSvg(state.base_spec, { overlay: state.overlay, layout });
               bytes = Buffer.from(String(rendered.svg), 'utf8');
             } catch {
@@ -1846,7 +1846,7 @@ export function createDocumentStore(options) {
   }
 
   /**
-   * @param {{operation_ref:string}} input
+   * @param {{operation_ref:string, document_id?:string}} input
    * @param {any} caller
    * @returns {Promise<any>}
    */
@@ -1857,6 +1857,11 @@ export function createDocumentStore(options) {
       if (!isPlainObject(input) || !isOperationId(input.operation_ref)) {
         return { state: 'unknown', reason_code: 'INVALID_INPUT' };
       }
+      // Review R-10: an operation must be looked up inside the document it
+      // belongs to; a bare operation id may not scan other documents.
+      if (input.document_id !== undefined && !isDocumentId(input.document_id)) {
+        return { state: 'unknown', reason_code: 'INVALID_INPUT' };
+      }
       const documentsDirectory = path.join(dataRoot, 'documents');
       let names;
       try {
@@ -1864,6 +1869,7 @@ export function createDocumentStore(options) {
       } catch {
         names = [];
       }
+      if (input.document_id !== undefined) names = names.filter((name) => name === input.document_id);
       let scanned = 0;
       for (const name of names) {
         if (scanned >= limits.journal_entries_scan) break;
@@ -1890,7 +1896,7 @@ export function createDocumentStore(options) {
   }
 
   /**
-   * @param {{editor_session_ref:string}} input
+   * @param {{editor_session_ref:string, document_id?:string}} input
    * @param {any} caller
    * @returns {Promise<{closed:boolean}>}
    */
@@ -1901,6 +1907,9 @@ export function createDocumentStore(options) {
     const session = readSession(input.editor_session_ref);
     if (!session) return { closed: false };
     if (session.principal_id !== principal.principal_id) return { closed: false };
+    // Review R-10: closing must name the same document the session was opened
+    // for; a session ref alone cannot close another document's session.
+    if (input.document_id !== undefined && session.document_id !== input.document_id) return { closed: false };
     sessions.delete(input.editor_session_ref);
     return { closed: true };
   }

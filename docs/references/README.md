@@ -13,4 +13,6 @@
 
 **这些是逐字副本，内部相对链接沿用原工作区布局（如 `../docs/workflow-guide.md`、`../05-local-memory/PLAN.md`）**，在本独立仓库中可能指向不存在的位置，属预期；权威文件仍是原工作区对应文件。副本内容如与原工作区不一致，以原工作区为准，并在本仓库同步修正。
 
+注意：[design-review-surfaces.md](design-review-surfaces.md) 绑定的是**设计评审时的软件设计字节**；之后为独立仓库整理了链接、状态行与实现注（见 `docs/software-design.md` 头部），当前文件摘要已不再等于评审记录中的 SHA256，因此该评审结论只作为历史评审证据，不能声称当前设计字节已被同一评审覆盖。实现期的独立评审见 [docs/review.md](../review.md)。
+
 06 自身的规范以 [软件设计](../software-design.md)、[产品形态](../product-form.md)、[实现路线](../implementation-route.md)、[接口合同](../interfaces.md)、[兼容矩阵](../compatibility.md)、[机制说明](../mechanisms.md) 为准。

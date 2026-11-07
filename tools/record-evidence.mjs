@@ -58,9 +58,18 @@ function counter(label) {
   const match = combined.match(new RegExp(`^ℹ ${label} (\\d+)$`, 'm'));
   return match === null ? null : Number(match[1]);
 }
-const pass = counter('pass');
-const fail = counter('fail');
-const skipped = counter('skipped');
+// Tools other than node --test may print a JSON report with numeric pass/fail
+// (e.g. tools/validate.mjs); honour it instead of recording null counters.
+let jsonReport = null;
+try {
+  const parsed = JSON.parse(result.stdout ?? '');
+  if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) jsonReport = parsed;
+} catch {
+  // not a JSON report
+}
+const pass = counter('pass') ?? (jsonReport !== null && Number.isSafeInteger(jsonReport.pass) ? jsonReport.pass : null);
+const fail = counter('fail') ?? (jsonReport !== null && Number.isSafeInteger(jsonReport.fail) ? jsonReport.fail : null);
+const skipped = counter('skipped') ?? 0;
 const spawnError = result.error ? String(result.error.message ?? result.error) : null;
 const sourceLock = path.join(ROOT, 'source-lock.json');
 const record = {

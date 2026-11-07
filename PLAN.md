@@ -16,7 +16,7 @@
 - 生成图是说明/注释，源 snapshot 与 exact/may/unresolved 不可被图形美化提升。
 - 全资源本地；ARCHIFY_UPDATE_CHECK_DISABLED=1 由运行入口固定传入，阻断远程字体/图片/URL/AI/导出/更新旁路。
 - Atlas Viewer 已满足时不增加插件；生成 skill 和编辑 plugin 可分别交付、不强制同装。
-- 当前无实现。以下路径待创建，Windows命令用 .\runtime\node.exe；Linux用 ./runtime/node。先锁运行时、源码/发布包摘要及许可。
+- 历史计划状态：以下路径待创建，Windows命令用 .\runtime\node.exe；Linux用 ./runtime/node。先锁运行时、源码/发布包摘要及许可。（2026-11-07 更新：组件级实现与自测已完成，见顶部状态说明；本条保留为历史计划语义。）
 
 ## Review Focus
 

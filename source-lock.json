@@ -35,14 +35,14 @@
       },
       {
         "module": "@deepseek-ai/dsh-client-modules/lib/client.js",
-        "sha256": null,
+        "sha256": "426084f8672c26a469566a3f43c91a9b0d1dd73d0834028e553a6d0fa9cffa44",
         "mechanism": "window.__ModuleLoader__.load({id, factory(require)}) lazy-CJS client bundle; dsh.client declaration and shared platform module table (react, react/jsx-runtime, @deepseek-ai/dsh-client-ui-slots, ...)",
         "adopted": "bundle format only; no source vendored"
       },
       {
-        "module": "@deepseek-ai/dsh-package-manifest",
-        "sha256": null,
-        "mechanism": "dsh.bundle.patch + dsh.client {inject, platform} package declaration",
+        "module": "@deepseek-ai/dsh-package-manifest/lib/index.js",
+        "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+        "mechanism": "dsh.bundle.patch + dsh.client {inject, platform} package declaration (type-only package: lib/index.js is `export {}`)",
         "adopted": "package metadata only"
       }
     ]

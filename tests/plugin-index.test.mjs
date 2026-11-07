@@ -305,7 +305,7 @@ test('plugin: session.close through the channel revokes the store session', asyn
   assert.equal(typeof data.editor_session_ref, 'string');
   const closed = await ctx.state.handler(
     'session.close',
-    shell('op-plugin-close-1', { editor_session_ref: data.editor_session_ref }),
+    shell('op-plugin-close-1', { editor_session_ref: data.editor_session_ref, document_id: data.document_id }),
     undefined,
     fakePeer(),
   );

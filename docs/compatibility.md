@@ -37,11 +37,17 @@
 | `specDigest` 排除 `generated_at/source_state`，`overlayDigest` 排除 `updated_at` | 让同内容重渲染/重挂 overlay 稳定；语义幂等而非字节幂等 | contracts 测试覆盖；manifest `spec_digest` 使用该值 |
 | 证据模式同内容重复渲染：同一 `--out` 下复用同一不可变 artifact（语义 idempotency） | `generated_at` 为真实时间，字节不可复现 | 跨 `--out` 不保证字节一致；fixture 模式固定时钟可字节复现 |
 | 文档保存修订 sidecar 带 generation 前缀（`<gen>-<sha>.base.json` 等） | 恢复时无歧义 | store 测试覆盖；XML 字节摘要仍是 DocumentVersion 一部分 |
-| registry 的本地路径绑定存于 `registry.local.json`，不进严格 `DiagramAccessRegistryV1` | 严格 schema 不携带原始路径；lookup 每次重核 realpath 身份 | `tools/registry.mjs` 写入；RPC 响应永不泄露路径 |
+| registry 的本地路径绑定存于 `registry.local.json`，不进严格 `DiagramAccessRegistryV1` | 严格 schema 不携带原始路径；lookup 每次重核 realpath 身份 | `tools/registry.mjs` 写入；RPC 响应不返回 document/store/output 真实路径，base spec 的 `root_ref` 为 `root-ref:<digest>` 不透明引用 |
 | `document_id` 限 `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`（比通用 id 字符集窄） | 作为文件系统目录名 | store 校验与测试覆盖 |
 | 未启用可选 iframe bridge 运行路径（bridge 模块已实现并有测试） | 默认自有编辑器同构建内组件，无需 iframe | T4 验收中的 bridge 负例以组件测试覆盖 |
 | 03 事件消费为本地同步模块 `src/events.mjs`（无 Host 事件订阅） | 06 不阻塞于 03 完整实现，用 fixture 验证 | `tests/interop.test.mjs`；真实事件接线属组合门禁 |
 | 原位覆盖任意外部文件、跨进程平台级 CAS 未实现 | 设计明确后置；v1 用不可变修订 + 独占创建导出 | `docs/software-design.md` §8；store 单测证明不覆盖 |
+| spec.layout 在生成时写入确定性 positions（渲染/归档不再只算不写） | 让编辑器与 `.drawio` 都能基于真实坐标工作（独立评审 R-01） | `tests/review-regressions.test.mjs`；集成旅程断言 open 后非零坐标 |
+| 证据内容真实性默认只做结构校验，`coverage` 明确 `structurally validated only`；`policy.verify_evidence` / CLI `--verify-evidence-roots` 才逐 ref 校验 | CLI 无法单独证明 Atlas 证据真实性；避免过度声明（R-02） | `docs/mechanisms.md` DIA-EVID-01；`tests/review-regressions.test.mjs` |
+| `operation.get` / `session.close` 输入除设计表列字段外还要求 `document_id` | 把 operation/session 绑定到所属文档，避免跨文档引用（R-10） | `src/plugin/service.mjs`、`src/editor/document-store.mjs`；service/regression 测试 |
+| 新增 CLI `--import-drawio <file>` 作为外部 `.drawio` 的用户入口 | 设计 §1/§7 要求可打开外部/历史 XML；此前只有库级实现（R-07） | `tools/render.mjs`、`tests/review-regressions.test.mjs` |
+| 图包复用/恢复前重算 payload 的 size+sha256 | 防止“文件名齐全但字节被替换”的目录被当成功（R-11） | `src/archive.mjs`、`tests/review-regressions.test.mjs` |
+| `revoke` 支持按 `scope_generation` 级联；未给代次时撤销同 ref 全部代次 | 撤销旧代次不得连带新代次（R-04） | `src/editor/access.mjs`、`tests/review-regressions.test.mjs` |
 
 ## 4. 升级/替换条件
 

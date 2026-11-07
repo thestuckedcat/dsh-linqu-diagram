@@ -723,7 +723,7 @@ test('service: operation.get reports saved and unknown states', async (t) => {
   assert.equal(saved.status, 'ok');
 
   const lookup = assertRpcOk(
-    await call(service, 'operation.get', shellFor('operation.get', { operation_ref: 'op-save-for-lookup' })),
+    await call(service, 'operation.get', shellFor('operation.get', { operation_ref: 'op-save-for-lookup', document_id: opened.document_id })),
   );
   assert.equal(lookup.status, 'ok');
   assert.equal(lookup.data.state, 'saved');
@@ -733,7 +733,7 @@ test('service: operation.get reports saved and unknown states', async (t) => {
     await call(
       service,
       'operation.get',
-      shellFor('operation.get', { operation_ref: 'op-unknown' }, { operation_id: 'op-get-unknown-1' }),
+      shellFor('operation.get', { operation_ref: 'op-unknown', document_id: opened.document_id }, { operation_id: 'op-get-unknown-1' }),
     ),
   );
   assert.equal(unknown.status, 'ok');
@@ -747,7 +747,7 @@ test('service: session.close revokes the editor session and later saves fail', a
     await call(
       service,
       'session.close',
-      shellFor('session.close', { editor_session_ref: opened.editor_session_ref }, { operation_id: 'op-close-1' }),
+      shellFor('session.close', { editor_session_ref: opened.editor_session_ref, document_id: opened.document_id }, { operation_id: 'op-close-1' }),
     ),
   );
   assert.equal(closed.status, 'ok');
@@ -757,7 +757,7 @@ test('service: session.close revokes the editor session and later saves fail', a
     await call(
       service,
       'session.close',
-      shellFor('session.close', { editor_session_ref: opened.editor_session_ref }, { operation_id: 'op-close-2' }),
+      shellFor('session.close', { editor_session_ref: opened.editor_session_ref, document_id: opened.document_id }, { operation_id: 'op-close-2' }),
     ),
   );
   assert.deepEqual(again.data, { closed: false });

@@ -97,8 +97,14 @@ export function isForbiddenEnvKey(key) {
 export function isAbsoluteLocalPath(value) {
   if (typeof value !== 'string' || value.length === 0 || value.length > 1024) return false;
   if (/[\u0000-\u001f]/.test(value)) return false;
-  if (value.startsWith('\\\\')) return false; // UNC share, not local
-  if (path.win32.isAbsolute(value)) return true;
+  // Network shares are never local executables. Reject both backslash and
+  // forward-slash UNC forms (//server/share) and rooted-but-driveless paths.
+  if (/^[\\/]{2}/.test(value)) return false;
+  if (process.platform === 'win32') {
+    if (value.startsWith('\\') || value.startsWith('/')) return false;
+    return path.win32.isAbsolute(value);
+  }
+  if (value.startsWith('\\')) return false;
   return path.posix.isAbsolute(value);
 }
 

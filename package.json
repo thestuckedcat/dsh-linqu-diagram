@@ -22,7 +22,7 @@
     "skills",
     "tools",
     "docs",
-    "evidence/README.md",
+    "evidence",
     "runtime/README.md",
     "cordis.patch.yml",
     "source-lock.json",
@@ -52,8 +52,8 @@
   },
   "scripts": {
     "test": "node --test tests/",
-    "test:unit": "node --test tests/unit/",
     "render:fixture": "node tools/render.mjs --fixture --renderer builtin --out ./scratch-output",
+    "render:import": "node tools/render.mjs --import-drawio tests/fixtures/drawio/external-basic.drawio --out ./scratch-output",
     "network-smoke": "node tools/network-smoke.mjs --isolated --renderers builtin",
     "editor-smoke": "node tools/editor-smoke.mjs --isolated --fixture",
     "build:client": "node tools/build-client.mjs",

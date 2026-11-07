@@ -653,12 +653,21 @@ function runCommand(model, command) {
       if (removed.kind !== 'note' && removed.kind !== 'annotation_edge') {
         invalidCommand('remove_annotation only accepts note or annotation_edge items', '$.payload.id');
       }
-      items.splice(index, 1);
+      // A note may target an annotation edge; removing the edge alone would
+      // leave a dangling target and fail composite validation (review R-08).
+      const associated = removed.kind === 'annotation_edge'
+        ? items.filter((item) => item.kind === 'note' && item.target_ref === removed.id)
+        : [];
+      const removedItems = [removed, ...associated];
+      const removedIds = new Set(removedItems.map((item) => item.id));
+      for (let cursor = items.length - 1; cursor >= 0; cursor -= 1) {
+        if (removedIds.has(items[cursor].id)) items.splice(cursor, 1);
+      }
       return {
         overlay,
-        selection: selection.filter((id) => id !== removed.id),
-        undo: { remove_ids: [], restore_items: [removed] },
-        redo: { remove_ids: [removed.id], restore_items: [] },
+        selection: selection.filter((id) => !removedIds.has(id)),
+        undo: { remove_ids: [], restore_items: clone(removedItems) },
+        redo: { remove_ids: removedItems.map((item) => item.id), restore_items: [] },
       };
     }
     case 'remove_annotation_node': {
@@ -730,10 +739,18 @@ function removeAnnotationNode(model, overlay, selection, payload) {
 
   /** @type {Set<string>} */
   const associatedIds = new Set();
+  /** @type {Set<string>} */
+  const removedEdgeIds = new Set();
+  for (const item of items) {
+    if (item.kind === 'annotation_edge' && (item.from === nodeId || item.to === nodeId)) removedEdgeIds.add(item.id);
+  }
   for (const item of items) {
     if (item.id === nodeId) continue;
-    if (item.kind === 'annotation_edge' && (item.from === nodeId || item.to === nodeId)) associatedIds.add(item.id);
-    else if (item.kind === 'note' && item.target_ref === nodeId) associatedIds.add(item.id);
+    if (removedEdgeIds.has(item.id)) {
+      associatedIds.add(item.id);
+      continue;
+    }
+    if (item.kind === 'note' && (item.target_ref === nodeId || removedEdgeIds.has(item.target_ref))) associatedIds.add(item.id);
     else if (item.kind === 'layout' && item.target_ref === nodeId) associatedIds.add(item.id);
     else if (item.kind === 'visibility' && item.target_ref === nodeId) associatedIds.add(item.id);
   }

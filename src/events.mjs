@@ -24,6 +24,7 @@
  */
 import { validateSchema } from './schema.mjs';
 import { LIMITS } from './limits.mjs';
+import { rootRefIdentity } from './source-identity.mjs';
 
 const EVENT_KINDS = Object.freeze(['session_surface_rewound', 'workspace_files_restored', 'session_removed']);
 const OUTCOMES = Object.freeze(['completed', 'partial', 'outcome_unknown']);
@@ -116,7 +117,13 @@ export function applyFactEvent(spec, event, state = createInteropState()) {
     ? validSpec.sources.flatMap((source) => (Array.isArray(source?.repos) ? source.repos : []))
     : [];
   const affected = event.affected_refs.filter((ref) =>
-    repos.some((repo) => repo?.repo_id === ref || repo?.root_ref === ref));
+    repos.some(
+      (repo) =>
+        repo?.repo_id === ref ||
+        repo?.root_ref === ref ||
+        // Spec root refs are opaque digests; accept a raw registered root too.
+        (typeof repo?.repo_id === 'string' && repo.root_ref === rootRefIdentity(validSpec.scope_ref, repo.repo_id, ref)),
+    ));
   const intersects = sameScope && affected.length > 0;
 
   if (event.kind === 'workspace_files_restored') {

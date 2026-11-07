@@ -1,6 +1,6 @@
 # 06 产品形态：本地图示
 
-版本DIA-PF-1，2026-11-07。状态：产品方向已确认，功能未实现；独立评审状态见[评审报告](references/design-review-surfaces.md)。本页集中保留用户已有决定，不再逐项询问内部机制。
+版本DIA-PF-1，2026-11-07。状态：产品方向已确认；组件级实现与自测完成，真实 Host 安装/浏览器旅程未验证（见[实现路线](implementation-route.md)与[机制说明](mechanisms.md)）；独立评审状态见[评审报告](references/design-review-surfaces.md)。本页集中保留用户已有决定，不再逐项询问内部机制。
 
 | ID | 最终目标与首版范围 | 状态/来源 |
 |---|---|---|

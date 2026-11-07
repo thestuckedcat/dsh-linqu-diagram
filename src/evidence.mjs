@@ -17,6 +17,8 @@ import { validateSchema } from './schema.mjs';
 import { canonicalJson, sha256Hex } from './canonical.mjs';
 import { LIMITS, CODES } from './limits.mjs';
 import { DiagramError, fail } from './errors.mjs';
+import { layoutDiagram } from './layout.mjs';
+import { rootRefIdentity } from './source-identity.mjs';
 import {
   PATTERNS,
   SCHEMAS,
@@ -377,6 +379,19 @@ function mapEvidenceRefs(refs, identity, limits, path) {
     if (ref.line_end < ref.line_start) {
       fail(CODES.INVALID_INPUT, `${refPath}.line_end must not be smaller than line_start`);
     }
+    const relPath = String(ref.path_ref);
+    const segments = relPath.split(/[\\/]/);
+    if (
+      relPath.length === 0 ||
+      /^[\\/]/.test(relPath) ||
+      /^[A-Za-z]:/.test(relPath) ||
+      segments.some((segment) => segment === '..' || segment === '.' || segment === '')
+    ) {
+      fail(CODES.INVALID_INPUT, `${refPath}.path_ref must be a repo-relative, safe path (no absolute/UNC/dot segments)`);
+    }
+    if (typeof ref.content_digest !== 'string' || ref.content_digest.length === 0) {
+      fail(CODES.INVALID_INPUT, `${refPath}.content_digest must be a non-empty digest string`);
+    }
     return {
       evidence_id: ref.evidence_id,
       source_id: ref.source_id,
@@ -390,6 +405,52 @@ function mapEvidenceRefs(refs, identity, limits, path) {
   });
 }
 
+/**
+ * Content-authenticity hook for evidence refs (independent review R-02).
+ *
+ * The evidence subset is caller-supplied: this build cannot prove a ref's
+ * bytes/path by itself. When the caller passes a trusted `policy.verify_evidence`
+ * function (the 04/Atlas manifest reader or a local-root verifier), every
+ * unique ref must return `{ok:true}` or the whole spec is rejected. Without a
+ * verifier the spec keeps the refs but records a `structural-only` coverage
+ * note so HTML/manifest never silently claims content verification.
+ *
+ * @param {any[]} nodes
+ * @param {any[]} edges
+ * @param {Record<string, any>} policy
+ * @returns {{state:'verified'|'structural-only', checked:number, failed:string[]}}
+ */
+function verifyEvidenceRefs(nodes, edges, policy) {
+  const verifier = policy.verify_evidence;
+  if (verifier === undefined || verifier === null) return { state: 'structural-only', checked: 0, failed: [] };
+  if (typeof verifier !== 'function') {
+    fail(CODES.INVALID_INPUT, 'policy.verify_evidence must be a function returning {ok,reason?}');
+  }
+  const seen = new Set();
+  const failed = [];
+  let checked = 0;
+  const refs = [];
+  for (const node of nodes) for (const ref of node.evidence_refs ?? []) refs.push(ref);
+  for (const edge of edges) for (const ref of edge.evidence_refs ?? []) refs.push(ref);
+  for (const ref of refs) {
+    const key = `${ref.evidence_id}|${ref.repo_id}|${ref.path_ref}|${ref.line_start}|${ref.line_end}|${ref.content_digest}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    checked += 1;
+    let result;
+    try {
+      result = verifier(ref);
+    } catch (error) {
+      failed.push(`${ref.evidence_id}: verifier threw ${String(error?.message ?? error)}`);
+      continue;
+    }
+    if (result === null || typeof result !== 'object' || result.ok !== true) {
+      failed.push(`${ref.evidence_id}: ${result && typeof result.reason === 'string' ? result.reason : 'not verified'}`);
+    }
+  }
+  return { state: 'verified', checked, failed };
+}
+
 /** @param {any} identity */
 function copySourceIdentity(identity) {
   return {
@@ -398,7 +459,8 @@ function copySourceIdentity(identity) {
     snapshot_ref: identity.snapshot_ref,
     repos: identity.repos.map((repo) => ({
       repo_id: repo.repo_id,
-      root_ref: repo.root_ref,
+      // Opaque root reference: specs/artifacts/RPC never persist local paths.
+      root_ref: rootRefIdentity(identity.scope_ref, repo.repo_id, repo.root_ref),
       revision: repo.revision,
       dirty_digest: repo.dirty_digest,
       build_variant: repo.build_variant,
@@ -572,6 +634,20 @@ function buildEvidenceSpec(input, policy) {
   const notes = [];
   if (subset.atlas_version !== undefined) notes.push(`evidence subset producer: ${subset.atlas_version}`);
   if (truncated) notes.push('input exceeded diagram limits and was explicitly truncated (policy.truncate=true)');
+
+  // Evidence authenticity (independent review R-02): the input subset declares
+  // its own refs, so this build can only enforce structure unless the caller
+  // supplies a trusted verifier (e.g. the 04/Atlas manifest reader). A verifier
+  // failure rejects the whole spec instead of silently keeping exact labels.
+  const verification = verifyEvidenceRefs(nodes, keptEdges, policy);
+  if (verification.failed.length > 0) {
+    fail(CODES.INVALID_SPEC, `evidence verification failed for ${verification.failed.length} ref(s): ${verification.failed.slice(0, 3).join('; ')}`);
+  }
+  if (verification.state === 'structural-only') {
+    notes.push('evidence_refs are structurally validated only; content authenticity is the caller-supplied registered evidence manifest, not re-read by this build');
+  } else {
+    notes.push(`evidence_refs content-checked by trusted verifier (${verification.checked} refs)`);
+  }
   const inputCoverage = subset.coverage ?? {};
   const coverage = {
     complete: /** @type {const} */ (false),
@@ -603,7 +679,34 @@ function buildEvidenceSpec(input, policy) {
     renderer_ref: rendererRef(policy),
   };
   spec.source_state = resolveSourceState(spec, input, policy);
-  return spec;
+  return finalizeLayout(spec, policy);
+}
+
+/**
+ * Fill the canonical deterministic layout before the spec becomes an overlay
+ * base / digest / `.drawio` source. Without this the generated artifacts would
+ * carry empty positions and every editor/export would stack nodes at (0,0)
+ * (independent review R-01).
+ * @param {any} spec
+ * @param {Record<string, any>} _policy
+ */
+function finalizeLayout(spec, _policy) {
+  const direction = spec.layout?.direction === 'TB' ? 'TB' : 'LR';
+  const computed = layoutDiagram(spec, { direction });
+  return {
+    ...spec,
+    layout: {
+      algorithm: /** @type {const} */ ('layered_v1'),
+      direction: computed.direction,
+      positions: computed.positions.map((position) => ({
+        node_id: position.node_id,
+        x: position.x,
+        y: position.y,
+        width: position.width,
+        height: position.height,
+      })),
+    },
+  };
 }
 
 /**
@@ -695,7 +798,7 @@ function buildConceptualSpec(conceptual, policy) {
   const notes = [conceptualCoverageNote()];
   if (truncated) notes.push('input exceeded diagram limits and was explicitly truncated (policy.truncate=true)');
 
-  return {
+  return finalizeLayout({
     schema_version: /** @type {const} */ (1),
     diagram_id: resolveDiagramId('conceptual', scopeRef, title, nodes, keptEdges, policy),
     revision: resolveRevision(policy),
@@ -717,7 +820,7 @@ function buildConceptualSpec(conceptual, policy) {
     source_state: /** @type {const} */ ('unknown'),
     generated_at: clockNow(policy),
     renderer_ref: rendererRef(policy),
-  };
+  }, policy);
 }
 
 /* ------------------------------------------------------------------------- *

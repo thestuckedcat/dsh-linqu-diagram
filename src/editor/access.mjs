@@ -752,37 +752,50 @@ export function createAccessRegistry(initial, options = {}) {
       return invalid(pushIssue(errors, '$.kind', 'enum', 'kind must be context|document|output_root'));
     }
     if (!isId(input.ref)) return invalid(pushIssue(errors, '$.ref', 'id', 'ref must be an id (1-128 chars)'));
-    const entry = findByRef(kind, input.ref);
-    if (entry === null) return { ok: false, code: 'NOT_FOUND', errors: [] };
+    // Optional scope_generation (independent review R-04): revoking one scope
+    // generation must never cascade into a newer generation of the same scope.
+    const generation = input.scope_generation;
+    if (generation !== undefined && !isScopeGeneration(generation)) {
+      return invalid(pushIssue(errors, '$.scope_generation', 'type', 'scope_generation must be a non-negative safe integer'));
+    }
+    const key = kind === 'context' ? 'context_ref' : kind === 'document' ? 'document_ref' : 'output_ref';
+    const entries = list(kind).filter(
+      (entry) => entry[key] === input.ref && (generation === undefined || entry.scope_generation === generation),
+    );
+    if (entries.length === 0) return { ok: false, code: 'NOT_FOUND', errors: [] };
     /** @type {{contexts:number, documents:number, output_roots:number}} */
     const affected = { contexts: 0, documents: 0, output_roots: 0 };
-    if (entry.active !== true) {
+    const activeEntries = entries.filter((entry) => entry.active === true);
+    if (activeEntries.length === 0) {
       return { ok: true, revoked: false, already_revoked: true, affected };
     }
-    entry.active = false;
-    affected[kind === 'context' ? 'contexts' : kind === 'document' ? 'documents' : 'output_roots'] += 1;
-    if (kind === 'context') {
-      for (const document of state.documents) {
-        if (document.scope_ref === entry.scope_ref && document.active === true) {
+    for (const entry of activeEntries) {
+      entry.active = false;
+      affected[kind === 'context' ? 'contexts' : kind === 'document' ? 'documents' : 'output_roots'] += 1;
+      if (kind === 'context') {
+        for (const document of state.documents) {
+          if (document.active !== true) continue;
+          if (document.scope_ref !== entry.scope_ref || document.scope_generation !== entry.scope_generation) continue;
           document.active = false;
           affected.documents += 1;
         }
-      }
-      for (const root of state.output_roots) {
-        if (root.scope_ref === entry.scope_ref && root.active === true) {
+        for (const root of state.output_roots) {
+          if (root.active !== true) continue;
+          if (root.scope_ref !== entry.scope_ref || root.scope_generation !== entry.scope_generation) continue;
           root.active = false;
           affected.output_roots += 1;
         }
-      }
-    } else if (kind === 'output_root') {
-      const rootPath = outputRootPaths.get(entry.output_ref);
-      for (const document of state.documents) {
-        if (document.active !== true) continue;
-        const documentPath = documentPaths.get(document.document_ref);
-        if (documentPath === undefined || rootPath === undefined) continue;
-        if (isWithinRoot(rootPath, documentPath)) {
-          document.active = false;
-          affected.documents += 1;
+      } else if (kind === 'output_root') {
+        const rootPath = outputRootPaths.get(entry.output_ref);
+        for (const document of state.documents) {
+          if (document.active !== true) continue;
+          if (document.scope_ref !== entry.scope_ref || document.scope_generation !== entry.scope_generation) continue;
+          const documentPath = documentPaths.get(document.document_ref);
+          if (documentPath === undefined || rootPath === undefined) continue;
+          if (isWithinRoot(rootPath, documentPath)) {
+            document.active = false;
+            affected.documents += 1;
+          }
         }
       }
     }
